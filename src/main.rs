@@ -12,18 +12,24 @@ fn main() {
 
 fn char_literals() -> String {
     let mut ch = vec![
-        '"',
-        'L',
+        'F',
         '\x65',
-        '\u{74}',
+        'e',
+        '\u{6C}',
+        '\u{069}',
+        'n',
         '\'',
-        '\u{073}',
         '\u{9}',
-        '\u{0067}',
-        '\u{0006F}',
-        '\u{00_00_21}',
+        '"',
+        '\u{00072}',
+        'u',
+        '\u{0073}',
+        '\u{00_00_74}',
+        'y',
+        '\"', //" TODO remove
         '\t',
         '\\',
+        'o',
         '/',
         '\r',
         '\n',
@@ -50,13 +56,9 @@ fn char_literals() -> String {
 //~         '\u{1234567}',
     ];
 
-    for i in [6, 10] {
-        ch[i] = ' ';
-    }
-    for (i0, i1) in [(8, 12), (0, 14)] {
-        ch.insert(i1, ch[i0]);
-    }
-    let ch = ch.iter().filter(|c| !c.is_control());
+    ch.iter_mut().for_each(|c| if c.is_whitespace() {
+        *c = ' ';
+    });
 
     String::from_iter(ch)
 }
