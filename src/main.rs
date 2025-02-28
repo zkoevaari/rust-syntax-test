@@ -68,59 +68,32 @@ fn char_literals() -> String {
     String::from_iter(c)
 }
 
-#[derive(Clone, Debug)]
-struct Message12 (
-    u8,
-    u16,
-    u32,
-    u64,
-    u128,
-    usize,
-    i8,
-    i16,
-    i32,
-    i64,
-    i128,
-    isize,
-);
-impl std::fmt::Display for Message12 {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        let mut msg = String::with_capacity(12);
-
-        msg.push(char::from(u8::try_from(self.0).unwrap()));
-        msg.push(char::from(u8::try_from(self.1).unwrap()));
-        msg.push(char::from(u8::try_from(self.2).unwrap()));
-        msg.push(char::from(u8::try_from(self.3).unwrap()));
-        msg.push(char::from(u8::try_from(self.4).unwrap()));
-        msg.push(char::from(u8::try_from(self.5).unwrap()));
-        msg.push(char::from(u8::try_from(self.6).unwrap()));
-        msg.push(char::from(u8::try_from(self.7).unwrap()));
-        msg.push(char::from(u8::try_from(self.8).unwrap()));
-        msg.push(char::from(u8::try_from(self.9).unwrap()));
-        msg.push(char::from(u8::try_from(self.10).unwrap()));
-        msg.push(char::from(u8::try_from(self.11).unwrap()));
-//~         for i in 0..12 {
-//~             msg.push(char::from(u8::try_from(self.i).unwrap()));
-//~         }
-
-        writeln!(fmt, "{msg}")
-    }
+macro_rules! string_try_chars {
+    ($($e:expr),+ $(,)?) => {
+        {
+            let mut s = String::new();
+            $(
+                s.push(char::from(u8::try_from($e).unwrap_or(b'?')));
+            )*
+            s
+        }
+    };
 }
 
 fn integers() -> String {
-    let msg = Message12(
-        72u8,
-        101u16,
-        108u32,
-        108u64,
-        111u128,
-        32usize,
-        119i8,
-        111i16,
-        114i32,
-        108i64,
-        100i128,
-        33isize,
-    );
+    let msg = string_try_chars![
+        72u8 as u8,
+        101u16 as u16,
+        108u32 as u32,
+        108u64 as u64,
+        111u128 as u128,
+        32usize as usize,
+        119i8 as i8,
+        111i16 as i16,
+        114i32 as i32,
+        108i64 as i64,
+        100i128 as i128,
+        33isize as isize,
+    ];
     format!("{msg}")
 }
