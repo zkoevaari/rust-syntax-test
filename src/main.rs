@@ -7,8 +7,9 @@
 */
 
 fn main() {
-//~     println!("{}", char_literals());
-    println!("{}", integers());
+    println!("{}", char_literals());
+    println!("{}", strings());
+//~     println!("{}", integers());
 }
 
 fn char_literals() -> String {
@@ -45,7 +46,7 @@ fn char_literals() -> String {
 //~         ('\x',          b'\x',          6a3),
 //~         ('\x9',         b'\x9',         0b2),
 //~         ('\x80',        b'\xGG',        0o8),
-//~         ('\xFF',        b'\x063',       0xG),
+//~         ('\x7_F',       b'\x063',       0xG),
 //~         ('\x063',       b'\u',          00x63),
 //~         ('\u',          b'\u0063,       63u),
 //~         ('\u0063,       b'\u{}',        63u0),
@@ -60,12 +61,38 @@ fn char_literals() -> String {
         assert_eq!(*c, char::from(*b));
     }
 
-    let c = v.iter().map(|(c, _, _)| match c.is_whitespace() {
+    let nts = String::from_iter(v.iter().map(|(c, _, _)| match c.is_whitespace() {
         true => ' ',
         false => *c,
-    });
+    }));
+    substr_until_nul(&nts).to_string()
+}
 
-    String::from_iter(c)
+fn strings() -> String {
+    let normal_str = "\u{9}|  \x7c T\"\' |   |    /\
+    '\\  A\r\n\t\x7C--| |\u{2d}  |   |   \u{28}   ) V
+    \u{07C}  | \u{007C}__ |\u{0005F}_ |_\u{00_00_5F}  \\_/  #\0"; //" TODO remove
+
+    let byte_str = b"\x09|  \x7c T\"\' |   |    /\
+    '\\  A\r\n\t\x7C--| |\x2D  |   |   \x28   ) V
+    \x7C  | \x7C__ |\x5F_ |_\x5F  \\_/  #\0";
+
+    let c_str = c"\u{9}|  \x7c T\"\' |   |    /\
+    '\\  A\r\n\t\x7C--| |\u{2d}  |   |   \u{28}   ) V
+    \u{07C}  | \u{007C}__ |\u{0005F}_ |_\u{00_00_5F}  \\_/  #"; //" TODO remove
+
+    assert_eq!(normal_str, std::str::from_utf8(byte_str).unwrap());
+    assert_eq!(c_str, std::ffi::CStr::from_bytes_with_nul(byte_str).unwrap());
+
+    let without_nul = substr_until_nul(normal_str);
+    assert_eq!(without_nul, c_str.to_string_lossy());
+
+//~     let raw_str = r#"\u{9}|  \x7c T\"\' |   |    /\
+//~     '\\  A\r\n\t\x7C--| |\u{2d}  |   |   \u{28}   ) V
+//~     \u{07C}  | \u{007C}__ |\u{0005F}_ |_\u{00_00_5F}  \\_/  #\0"#;
+//~     assert_eq!(normal_str, unescape(raw_str));
+
+    without_nul.replace('\t', "").replace("\n    ", "\n")
 }
 
 macro_rules! string_try_chars {
@@ -80,7 +107,7 @@ macro_rules! string_try_chars {
     };
 }
 
-fn integers() -> String {
+fn _integers() -> String {
     let msg = string_try_chars![
         72u8 as u8,
         101u16 as u16,
@@ -96,4 +123,37 @@ fn integers() -> String {
         33isize as isize,
     ];
     format!("{msg}")
+}
+
+fn substr_until_nul(slice: &str) -> &str {
+    match slice.chars().position(|c| c == '\0') {
+        Some(i) => &slice[0..i],
+        None => slice,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_substr_until_nul() {
+        let ref1 = "Hello world!";
+        let art1 = ref1.clone();
+        assert_eq!(substr_until_nul(art1), ref1);
+
+        let art2 = "Hello world!\0";
+        assert_eq!(substr_until_nul(art2), ref1);
+
+        let art3 = "Hello\0 world!";
+        let ref3 = "Hello";
+        assert_eq!(substr_until_nul(art3), ref3);
+
+        let art4 = "Hello\0 world!\0";
+        assert_eq!(substr_until_nul(art4), ref3);
+        assert_eq!(
+            substr_until_nul(art4),
+            std::ffi::CStr::from_bytes_until_nul(art4.as_bytes()).unwrap().to_str().unwrap()
+        );
+    }
 }
