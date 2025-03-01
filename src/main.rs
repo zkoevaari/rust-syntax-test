@@ -7,9 +7,18 @@
 */
 
 fn main() {
-    println!("{}", char_literals());
-    println!("{}", strings());
-//~     println!("{}", integers());
+    let mut chars = char_literals();
+    tab_to_space(&mut chars);
+    print!("{chars}");
+
+    let _raw1 = raw_strings_1();
+
+    let string = prettify(strings());
+    println!("{string}");
+
+    let _raw2 = raw_strings_2();
+
+    println!("{}", integers());
 }
 
 fn char_literals() -> String {
@@ -37,7 +46,7 @@ fn char_literals() -> String {
         ('\n',              b'\n',      10_u8),
         ('\0',              b'\0',      0),
 
-        // These are all invalid
+        // These are invalid
 //~         ('',            b'',            0b_),
 //~         ('\',           b'\',           0x__),
 //~         (''',           b''',           0B1001)
@@ -48,8 +57,8 @@ fn char_literals() -> String {
 //~         ('\x80',        b'\xGG',        0o8),
 //~         ('\x7_F',       b'\x063',       0xG),
 //~         ('\x063',       b'\u',          00x63),
-//~         ('\u',          b'\u0063,       63u),
-//~         ('\u0063,       b'\u{}',        63u0),
+//~         ('\u',          b'\u0063'       63u),
+//~         ('\u0063',      b'\u{}',        63u0),
 //~         ('\u{}',        b'\u{G}',       63u08),
 //~         ('\u{G}',       b'\u{0063}',    63u_8),
 //~         ('\u{+0063}',   b'\u{+0063}',   63u8_),
@@ -61,14 +70,53 @@ fn char_literals() -> String {
         assert_eq!(*c, char::from(*b));
     }
 
-    let nts = String::from_iter(v.iter().map(|(c, _, _)| match c.is_whitespace() {
-        true => ' ',
-        false => *c,
-    }));
+    let nts = String::from_iter(v.iter().map(|(c, _, _)| c));
     substr_until_nul(&nts).to_string()
 }
 
-fn strings() -> String {
+fn raw_strings_1() -> String {
+    let raw_s =  r#"F\x65e\u{6C}\u{069}n\'\u{9}"\u{00072}u\u{0073}\u{00_00_74}y\"\t\\#/\r\n\0"#;
+    let raw_b = br#"F\x65e\u{6C}\u{069}n\'\u{9}"\u{00072}u\u{0073}\u{00_00_74}y\"\t\\#/\r\n\0"#;
+    let raw_c = cr#"F\x65e\u{6C}\u{069}n\'\u{9}"\u{00072}u\u{0073}\u{00_00_74}y\"\t\\#/\r\n\0"#;
+
+    assert_eq!(raw_s, std::str::from_utf8(raw_b).unwrap());
+    assert_eq!(raw_s, raw_c.to_string_lossy());
+
+    // These are invalid
+//~     let i1 = r""#;
+//~     let i2 = r#"#"##;
+//~     let i3 = r##"##"###;
+//~     let ib1 = br""#;
+//~     let ib2 = br#"#"##;
+//~     let ib3 = br##"##"###;
+//~     let ic1 = cr""#;
+//~     let ic2 = cr#"#"##;
+//~     let ic3 = cr##"##"###;
+
+    // These should not terminate
+//~     let u1 = r""";
+//~     let u2 = r#"#";
+//~     let u3 = r##"##;
+//~     let u4 = r##"";
+//~     let u5 = r##""#;
+//~     let u6 = r##"##"#;
+//~     let ub1 = br""";
+//~     let ub2 = br#"#";
+//~     let ub3 = br##"##;
+//~     let ub4 = br##"";
+//~     let ub5 = br##""#;
+//~     let ub6 = br##"##"#;
+//~     let uc1 = cr""";
+//~     let uc2 = cr#"#";
+//~     let uc3 = cr##"##;
+//~     let uc4 = cr##"";
+//~     let uc5 = cr##""#;
+//~     let uc6 = cr##"##"#;
+
+    raw_s.to_string()
+}
+
+fn strings() -> &'static str {
     let normal_str = "\u{9}|  \x7c T\"\' |   |    /\
     '\\  A\r\n\t\x7C--| |\u{2d}  |   |   \u{28}   ) V
     \u{07C}  | \u{007C}__ |\u{0005F}_ |_\u{00_00_5F}  \\_/  #\0"; //" TODO remove
@@ -87,12 +135,30 @@ fn strings() -> String {
     let without_nul = substr_until_nul(normal_str);
     assert_eq!(without_nul, c_str.to_string_lossy());
 
-//~     let raw_str = r#"\u{9}|  \x7c T\"\' |   |    /\
-//~     '\\  A\r\n\t\x7C--| |\u{2d}  |   |   \u{28}   ) V
-//~     \u{07C}  | \u{007C}__ |\u{0005F}_ |_\u{00_00_5F}  \\_/  #\0"#;
-//~     assert_eq!(normal_str, unescape(raw_str));
+    // These are invalid
+//~     let i = "\c, \x, \x9, \x80, \x7_F, \x063, \u, \u0063,
+//~         \u{}, \u{G}, \u{+0063}, \u{1234567}";
+//~     let ib = b"\c, \x, \x9, \xGG, \x063, \u, \u0063,
+//~         \u{}, \u{G}, \u{0063}, \u{+0063}, \u{1234567}";
+//~     let ic = c"\c, \x, \x9, \xGG, \x7_F, \x063, \u, \u0063,
+//~         \u{}, \u{G}, \u{+0063}, \u{1234567}";
+//~     let ic0 = c"\0, \x0, \x00, \x000, \u{0}, \u{00}, \u{000}, \u{0000},
+//~         \u{0_0000}, \u{00_0000}, \u{000_0000}";
 
-    without_nul.replace('\t', "").replace("\n    ", "\n")
+    let _multi_line_with_comment = "First line.
+    // This is not a comment!
+    Third line.";
+
+    without_nul
+}
+
+fn raw_strings_2() -> String {
+    let raw_str = r#"\u{9}|  \x7c T\"\' |   |    /\
+    '\\  A\r\n\t\x7C--| |\u{2d}  |   |   \u{28}   ) V
+    \u{07C}  | \u{007C}__ |\u{0005F}_ |_\u{00_00_5F}  \\_/  #\0"#;
+
+//~     unescape(raw_str)
+    raw_str.to_string()
 }
 
 macro_rules! string_try_chars {
@@ -106,8 +172,7 @@ macro_rules! string_try_chars {
         }
     };
 }
-
-fn _integers() -> String {
+fn integers() -> String {
     let msg = string_try_chars![
         72u8 as u8,
         101u16 as u16,
@@ -125,12 +190,47 @@ fn _integers() -> String {
     format!("{msg}")
 }
 
+//
+// Helper functions
+//
+
 fn substr_until_nul(slice: &str) -> &str {
     match slice.chars().position(|c| c == '\0') {
         Some(i) => &slice[0..i],
         None => slice,
     }
 }
+
+fn remove_tabs(s: &str) -> String {
+    s.replace('\t', "").replace("\n    ", "\n")
+}
+
+fn swap_ascii(s: &mut str, p: u8, r: u8) {
+    assert!(p <= 0x7F);
+    assert!(r <= 0x7F);
+    unsafe {
+        for c in s.as_bytes_mut() {
+            if *c == p {
+                *c = r;
+            }
+        }
+    }
+}
+
+fn tab_to_space(s: &mut str) {
+    swap_ascii(s, b'\t', b' ');
+}
+
+fn prettify(s: &str) -> String {
+    let mut n = remove_tabs(s)
+        .replace('A', "\u{039b}");
+    swap_ascii(&mut n, b'#', b'o');
+    n
+}
+
+//
+// Tests
+//
 
 #[cfg(test)]
 mod tests {
