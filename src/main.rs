@@ -136,14 +136,11 @@ fn strings() -> &'static str {
     assert_eq!(without_nul, c_str.to_string_lossy());
 
     // These are invalid
-//~     let i = "\c, \x, \x9, \x80, \x7_F, \x063, \u, \u0063,
-//~         \u{}, \u{G}, \u{+0063}, \u{1234567}";
-//~     let ib = b"\c, \x, \x9, \xGG, \x063, \u, \u0063,
-//~         \u{}, \u{G}, \u{0063}, \u{+0063}, \u{1234567}";
-//~     let ic = c"\c, \x, \x9, \xGG, \x7_F, \x063, \u, \u0063,
-//~         \u{}, \u{G}, \u{+0063}, \u{1234567}";
-//~     let ic0 = c"\0, \x0, \x00, \x000, \u{0}, \u{00}, \u{000}, \u{0000},
-//~         \u{0_0000}, \u{00_0000}, \u{000_0000}";
+//~     let i = "\c \x \x9 \x80 \x7_F \u \u0063 \u{} \u{G} \u{+0063} \u{1234567}";
+//~     let ib = b"\c \x \x9 \xGG \u \u0063 \u{} \u{G} \u{0063} \u{+0063} \u{1234567}";
+//~     let ic = c"\c \x \x9 \xGG \x7_F \u \u0063 \u{} \u{G} \u{+0063} \u{1234567}";
+//~     let ic0 = c"\0 \x0 \x00 \u{0} \u{00} \u{000} \u{0000} \
+//~         \u{0_0000} \u{00_0000} \u{000_0000}";
 
     let _multi_line_with_comment = "First line.
     // This is not a comment!
