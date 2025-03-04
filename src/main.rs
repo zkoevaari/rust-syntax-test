@@ -19,6 +19,7 @@ fn main() {
     let _raw2 = raw_strings_2();
 
     println!("{}", integers());
+    println!("{}", floating_points());
 }
 
 fn char_literals() -> String {
@@ -186,6 +187,60 @@ fn integers() -> String {
     ];
     format!("{msg}")
 }
+
+fn floating_points() -> String {
+//~     let a = (97. as f16).into(); // TODO: use these when f16 and f128 stabilize
+    let a = (97. as f32).into();
+    let e = 101f16.into();
+    let i = (105.0 as f32).into();
+    let o = 111.0f32.into();
+//~     let u = f128::round(117_.0) as f64;
+    let u = f64::round(117_.0);
+    let sp = 32_f128 as f64;
+
+    let floats = [
+        34.0_,      69.0_f64,   109e0,
+        112E0,      o,          119_e0,
+        e,          114_E0,     i,
+        110e_0,     103E_0,     sp,
+        e,          118e0_,     e,
+        114E0_,     121e_0_,    o,
+        110E_0_,    e,          sp,
+        116_e_0_,   o,          sp,
+        98_E_0_,    u,          i,
+        108e0f64,   100E0f64,   sp,
+        114e0_f64,  e,          108E0_f64,
+        i,          a,          98e+0,
+        108E+0,     e,          sp,
+        a,          110e-0,     100E-0,
+        sp,         e,          102e+0f64,
+        102E+0f64,  i,          99e-0f64,
+        i,          e,          110E-0f64,
+        116e+_0,    sp,         115E+_0,
+        o,          102e-_0,    116E-_0,
+        119e+0_f64, a,          114E+0_f64,
+        e,          46e-0_f64,  34E-0_f64,
+
+        // These are invalid
+//~         _1.0,       1._,        1._0,
+//~         1.f64,      1.0f12,     1.0f64,
+//~         1.0u64,     1._f64,     1._0f64,
+//~         1.0f_64,    1.0f64_,    0x1.0,
+//~         1.0x0,      1e,         1E,
+//~         1ef64,      1Ef64,      1e0f12,
+//~         1E0f12,     1e+,        1E+,
+//~         1e-,        1E-,        1e+f64,
+//~         1E+f64,     1e-f64,     1E-f64,
+//~         1e_+0,      1E_+0,      1e_-0,
+//~         1E_-0,
+    ];
+
+    String::from_utf8(floats.iter().map(|f| *f as u8).collect()).unwrap()
+}
+
+//~ fn ranges() {
+//~     1.. //Ok, gives RangeFrom<{integer}>
+//~ }
 
 //
 // Helper functions
