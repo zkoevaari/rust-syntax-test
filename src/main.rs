@@ -6,6 +6,8 @@
     (see LICENSE.txt)
 */
 
+use std::time::SystemTime;
+
 fn main() {
     let chars = char_literals();
     let mut chars2 = substr_until_nul(&chars).to_string();
@@ -20,6 +22,7 @@ fn main() {
 
     println!("{}", integers());
     println!("{}", floating_points());
+    println!("{}", ranges());
 }
 
 fn char_literals() -> String {
@@ -142,6 +145,7 @@ fn strings() -> &'static str {
 //~     let ic0 = c"\0 \x0 \x00 \u{0} \u{00} \u{000} \u{0000} \
 //~         \u{0_0000} \u{00_0000} \u{000_0000}";
 
+    // /*
     let multi = "Line #1
     // This is not a comment! \\
     Line #3";
@@ -150,6 +154,7 @@ fn strings() -> &'static str {
     Line #3"#;
     assert_ne!(raw_multi, multi);
     assert_eq!(unescape(raw_multi), multi);
+    // */
 
     without_nul
 }
@@ -227,15 +232,57 @@ fn floating_points() -> String {
 //~         1e-,        1E-,        1e+f64,
 //~         1E+f64,     1e-f64,     1E-f64,
 //~         1e_+0,      1E_+0,      1e_-0,
-//~         1E_-0,
+//~         1E_-0,      .1,         .1f64,
     ];
 
     String::from_utf8(floats.iter().map(|f| *f as u8).collect()).unwrap()
 }
 
-//~ fn ranges() {
-//~     1.. //Ok, gives RangeFrom<{integer}>
-//~ }
+fn ranges() -> String {
+    let (mut h, m) = get_time();
+
+    let prefix = match m {
+        ..4 => "It is exactly",
+        57.. => {
+            h += 1;
+            "It is almost"
+        }
+        ..=18 => "It is a little past",
+        42u8..57 => {
+            h += 1;
+            "It is approaching"
+        }
+        27_..=33 => {
+            h += 1;
+            "It is halfway to"
+        }
+
+        // These are invalid
+//~         1..= | 1... | 1...2 => "",
+
+        _ => "It is about half past",
+    };
+
+    let tod = match h as f32 {
+        22.0.. | ..3. => "at night",
+        ..=11f32 => "in the morning",
+        12e0..13.0 => "at midday",
+        19.0_..=2_1_f32 => "in the evening",
+        _ => "in the afternoon",
+    };
+
+    let h12 = match h {
+        13.. => h - 12,
+        _ => h,
+    };
+
+    // /*
+    fn floor() -> i32 { 42 }
+    let _range = 23..floor(); // Note: this is a range and not a function call on a float
+    // */
+
+    format!("{prefix} {h12} o'clock universal, {tod}.")
+}
 
 //
 // Helper functions
@@ -428,6 +475,14 @@ fn parse_unicode(digits: &[u8]) -> Option<char> {
     }
 
     char::from_u32(acc)
+}
+
+fn get_time() -> (u8, u8) {
+    let epoch_secs = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
+    let day_secs = epoch_secs % (24 * 60 * 60);
+    let hour = day_secs / (60 * 60);
+    let min = (day_secs - (hour * 60 * 60)) / 60;
+    (hour.try_into().unwrap(), min.try_into().unwrap())
 }
 
 //
