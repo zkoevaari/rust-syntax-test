@@ -7,16 +7,16 @@
 */
 
 fn main() {
-    let mut chars = char_literals();
-    tab_to_space(&mut chars);
-    print!("{chars}");
+    let chars = char_literals();
+    let mut chars2 = substr_until_nul(&chars).to_string();
+    tab_to_space(&mut chars2);
+    print!("{chars2}");
 
-    let _raw1 = raw_strings_1();
+    let raws = raw_strings();
+    assert_eq!(unescape(&raws), chars);
 
-    let string = prettify(strings());
-    println!("{string}");
-
-    let _raw2 = raw_strings_2();
+    let string = strings();
+    println!("{}", prettify(string));
 
     println!("{}", integers());
     println!("{}", floating_points());
@@ -71,11 +71,10 @@ fn char_literals() -> String {
         assert_eq!(*c, char::from(*b));
     }
 
-    let nts = String::from_iter(v.iter().map(|(c, _, _)| c));
-    substr_until_nul(&nts).to_string()
+    String::from_iter(v.iter().map(|(c, _, _)| c))
 }
 
-fn raw_strings_1() -> String {
+fn raw_strings() -> String {
     let raw_s =  r#"F\x65e\u{6C}\u{069}n\'\u{9}"\u{00072}u\u{0073}\u{00_00_74}y\"\t\\#/\r\n\0"#;
     let raw_b = br#"F\x65e\u{6C}\u{069}n\'\u{9}"\u{00072}u\u{0073}\u{00_00_74}y\"\t\\#/\r\n\0"#;
     let raw_c = cr#"F\x65e\u{6C}\u{069}n\'\u{9}"\u{00072}u\u{0073}\u{00_00_74}y\"\t\\#/\r\n\0"#;
@@ -114,7 +113,7 @@ fn raw_strings_1() -> String {
 //~     let uc5 = cr##""#;
 //~     let uc6 = cr##"##"#;
 
-    raw_s.to_string()
+    raw_s.replace('#', "o")
 }
 
 fn strings() -> &'static str {
@@ -143,20 +142,16 @@ fn strings() -> &'static str {
 //~     let ic0 = c"\0 \x0 \x00 \u{0} \u{00} \u{000} \u{0000} \
 //~         \u{0_0000} \u{00_0000} \u{000_0000}";
 
-    let _multi_line_with_comment = "First line.
-    // This is not a comment!
-    Third line.";
+    let multi = "Line #1
+    // This is not a comment! \\
+    Line #3";
+    let raw_multi = r#"Line #1
+    // This is not a comment! \\
+    Line #3"#;
+    assert_ne!(raw_multi, multi);
+    assert_eq!(unescape(raw_multi), multi);
 
     without_nul
-}
-
-fn raw_strings_2() -> String {
-    let raw_str = r#"\u{9}|  \x7c T\"\' |   |    /\
-    '\\  A\r\n\t\x7C--| |\u{2d}  |   |   \u{28}   ) V
-    \u{07C}  | \u{007C}__ |\u{0005F}_ |_\u{00_00_5F}  \\_/  #\0"#;
-
-//~     unescape(raw_str)
-    raw_str.to_string()
 }
 
 macro_rules! string_try_chars {
@@ -280,6 +275,161 @@ fn prettify(s: &str) -> String {
     n
 }
 
+fn unescape(s: &str) -> String {
+    enum State {
+        None,
+        Escape,
+        Ascii(Option<u8>),
+        UnicodeMaybe,
+        Unicode(Vec<u8>),
+    }
+
+    let mut out = String::new();
+    let mut buf = String::new();
+    let mut state = State::None;
+
+    for c in s.chars() {
+        state = match state {
+            State::None => match c {
+                '\\' => {
+                    buf.push(c);
+                    State::Escape
+                }
+                _ => {
+                    out.push(c);
+                    State::None
+                }
+            },
+            State::Escape => match c {
+                'x' => {
+                    buf.push(c);
+                    State::Ascii(None)
+                }
+                'u' => {
+                    buf.push(c);
+                    State::UnicodeMaybe
+                }
+                'n' => {
+                    out.push('\n');
+                    buf.clear();
+                    State::None
+                }
+                'r' => {
+                    out.push('\r');
+                    buf.clear();
+                    State::None
+                }
+                't' => {
+                    out.push('\t');
+                    buf.clear();
+                    State::None
+                }
+                '0' => {
+                    out.push('\0');
+                    buf.clear();
+                    State::None
+                }
+                '\'' | '"' | '\\' => {
+                    out.push(c);
+                    buf.clear();
+                    State::None
+                }
+                _ => {
+                    buf.push(c);
+                    out.push_str(&buf);
+                    buf.clear();
+                    State::None
+                }
+            },
+            State::Ascii(None) => match c {
+                _ if c.is_ascii_digit() && c != '8' && c != '9' => {
+                    buf.push(c);
+                    State::Ascii(Some(c.to_digit(16).unwrap().try_into().unwrap()))
+                }
+                _ => {
+                    buf.push(c);
+                    out.push_str(&buf);
+                    buf.clear();
+                    State::None
+                }
+            },
+            State::Ascii(Some(u)) => match c {
+                _ if c.is_ascii_hexdigit() => {
+                    out.push(
+                        char::from_u32(((u as u32) << 4) + c.to_digit(16).unwrap()).unwrap()
+                    );
+                    buf.clear();
+                    State::None
+                }
+                _ => {
+                    buf.push(c);
+                    out.push_str(&buf);
+                    buf.clear();
+                    State::None
+                }
+            },
+            State::UnicodeMaybe => {
+                buf.push(c);
+                match c {
+                    '{' => {
+                        State::Unicode(Vec::new())
+                    }
+                    _ => {
+                        out.push_str(&buf);
+                        buf.clear();
+                        State::None
+                    }
+                }
+            }
+            State::Unicode(mut v) => {
+                buf.push(c);
+                match c {
+                    '}' => {
+                        if v.is_empty() || v.len() > 6 {
+                            out.push_str(&buf);
+                        } else {
+                            match parse_unicode(&v) {
+                                Some(p) => out.push(p),
+                                _ => out.push_str(&buf),
+                            }
+                        }
+                        buf.clear();
+                        State::None
+                    }
+                    '_' => State::Unicode(v),
+                    _ if c.is_ascii_hexdigit() => {
+                        v.push(c.to_digit(16).unwrap().try_into().unwrap());
+                        State::Unicode(v)
+                    }
+                    _ => {
+                        out.push_str(&buf);
+                        buf.clear();
+                        State::None
+                    }
+                }
+            }
+        };
+    }
+
+    if !matches!(state, State::None) {
+        out.push_str(&buf);
+    }
+
+    out
+}
+fn parse_unicode(digits: &[u8]) -> Option<char> {
+    if digits.is_empty() || digits.len() > 8 {
+        return None;
+    }
+
+    let mut acc: u32 = 0;
+    for (i, u) in digits.iter().rev().enumerate() {
+        acc += (*u as u32) << (i * 4);
+    }
+
+    char::from_u32(acc)
+}
+
 //
 // Tests
 //
@@ -291,7 +441,7 @@ mod tests {
     #[test]
     fn test_substr_until_nul() {
         let ref1 = "Hello world!";
-        let art1 = ref1.clone();
+        let art1 = ref1;
         assert_eq!(substr_until_nul(art1), ref1);
 
         let art2 = "Hello world!\0";
@@ -307,5 +457,20 @@ mod tests {
             substr_until_nul(art4),
             std::ffi::CStr::from_bytes_until_nul(art4.as_bytes()).unwrap().to_str().unwrap()
         );
+    }
+
+    #[test]
+    fn test_parse_unicode() {
+        let tests = [
+            ('\t', vec![9]),
+            ('Z', vec![5, 0xA]),
+            ('\u{1b5}', vec![1, 0xB, 5]),
+            ('\u{2124}', vec![2, 1, 2, 4]),
+            ('\u{1FBC5}', vec![1, 0xF, 0xB, 0xC, 5]),
+        ];
+
+        for (r, a) in tests {
+            assert_eq!(parse_unicode(&a), Some(r));
+        }
     }
 }
