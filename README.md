@@ -8,7 +8,7 @@ highlighters.
 
 ## Status ##
 
-Almost complete, only `async` and `await` are remaining.
+Almost complete.
 
 
 ## Known bugs ##
@@ -19,6 +19,5 @@ but it is silly, sub-optimal, and not very pretty.
 
 TODO
 ====
-- 'static
 - comment variants
 - rename swap_ascii to replace_ascii

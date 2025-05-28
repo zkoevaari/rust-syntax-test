@@ -390,7 +390,7 @@ impl<T: Write> Write for EllipsizedSinger<'_, T> {
             for s in self.buf.iter().take(7) {
                 write!(self.writer, "{s}")?;
             }
-            writeln!(self.writer, "[...]")?;
+            writeln!(self.writer, "{}", ellipsis())?;
             for s in self.buf.iter().rev().take(9).rev() {
                 write!(self.writer, "{s}")?;
             }
@@ -398,6 +398,20 @@ impl<T: Write> Write for EllipsizedSinger<'_, T> {
         self.buf.clear();
         Ok(())
     }
+}
+
+fn ellipsis() -> &'static str {
+    let pin = std::pin::pin!(prepare_mark(async || "[...]"));
+    let mut ctx = std::task::Context::from_waker(std::task::Waker::noop());
+    if let std::task::Poll::Ready(v) = Future::poll(pin, &mut ctx) {
+        v
+    } else {
+        panic!("unexpected Poll::Pending");
+    }
+}
+
+async fn prepare_mark<'a>(f: impl AsyncFn() -> &'a str) -> &'a str {
+    f().await
 }
 
 fn misc_keywords(mut out: impl Write) {
@@ -419,7 +433,7 @@ fn misc_keywords(mut out: impl Write) {
         continue;
     }
     singer.flush().unwrap();
-    writeln!(out, "\n[...]").unwrap();
+    writeln!(out, "\n{}", ellipsis()).unwrap();
 }
 
 //
