@@ -6,9 +6,11 @@
     (see LICENSE.txt)
 */
 
+use std::collections::VecDeque;
+use std::io::Write;
 use std::time::SystemTime;
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let chars = char_literals();
     let mut chars2 = substr_until_nul(&chars).to_string();
     tab_to_space(&mut chars2);
@@ -23,6 +25,10 @@ fn main() {
     println!("{}", integers());
     println!("{}", floating_points());
     println!("{}", ranges());
+
+    misc_keywords(&mut std::io::stdout());
+
+    Ok(())
 }
 
 fn char_literals() -> String {
@@ -285,6 +291,138 @@ fn ranges() -> String {
 }
 
 //
+// Misc. keywords
+//
+
+trait Song {
+    fn sing(&mut self, out: &mut impl Write) -> bool;
+}
+struct NinetyNineBoB {
+    bottles: i8,
+}
+impl NinetyNineBoB {
+    pub(crate) const QTY: i8 = 99;
+
+    fn new() -> Self {
+        Self {
+            bottles: Self::QTY,
+        }
+    }
+
+    fn chorus(&self) -> String {
+        format!(
+            "{} bottle{} of beer",
+            match self.bottles {
+                0 => String::from("No more"),
+                _ => self.bottles.to_string(),
+            },
+            match self.bottles {
+                1 => "",
+                _ => "s",
+            }
+        )
+    }
+}
+impl Song for NinetyNineBoB {
+    fn sing(&mut self, out: &mut impl Write) -> bool {
+        writeln!(out, "\n{} on the wall, {},", self.chorus(), self.chorus()).unwrap();
+
+        self.bottles -= 1;
+        let ret = match self.bottles {
+            1.. => false,
+            _ => raw_true(),
+        };
+
+        writeln!(
+            out,
+            "{}, {} on the wall.",
+            match self.bottles {
+                0.. => "Take one down and pass it around",
+                _ => {
+                    self.bottles = Self::QTY;
+                    "Go to the store and buy some more"
+                }
+            },
+            self.chorus(),
+        ).unwrap();
+
+        ret
+    }
+}
+
+type IoResult<T> = std::io::Result<T>;
+
+struct EllipsizedSinger<'a, T>
+where T: Write
+{
+    buf: VecDeque<String>,
+    writer: &'a mut T,
+}
+impl<'a, T: Write> EllipsizedSinger<'a, T> {
+    fn new(writer: &'a mut T) -> Self {
+        Self {
+            buf: VecDeque::new(),
+            writer,
+        }
+    }
+}
+impl<T: Write> Write for EllipsizedSinger<'_, T> {
+
+    fn write(&mut self, b: &[u8]) -> IoResult<usize> {
+        let chunk = String::from(
+            str::from_utf8(b).map_err(move |e| std::io::Error::new(std::io::ErrorKind::Other, e))?
+        );
+        if self.buf.is_empty()
+            || self.buf.back().unwrap().chars().rev().next().unwrap() == '\n' {
+                self.buf.push_back(chunk);
+        } else {
+            self.buf.back_mut().unwrap().push_str(&chunk);
+        }
+        Ok(b.len())
+    }
+
+    fn flush(&mut self) -> IoResult<()> {
+        if self.buf.len() <= 16 {
+            for s in self.buf.iter() {
+                write!(self.writer, "{s}")?;
+            }
+        } else {
+            for s in self.buf.iter().take(7) {
+                write!(self.writer, "{s}")?;
+            }
+            writeln!(self.writer, "[...]")?;
+            for s in self.buf.iter().rev().take(9).rev() {
+                write!(self.writer, "{s}")?;
+            }
+        }
+        self.buf.clear();
+        Ok(())
+    }
+}
+
+fn misc_keywords(mut out: impl Write) {
+    writeln!(out, "\nLet's sing a song!").unwrap();
+    let mut singer_value = EllipsizedSinger::new(&mut out);
+    let ref mut singer = singer_value;
+    let mut song = NinetyNineBoB::new();
+    let mut n: u8 = 0;
+    'outer: loop {
+        let mut m: u8 = 0;
+        while !song.sing(singer) {
+            m += 1;
+            if m >= 2 && n >= 1 {
+                break 'outer;
+            }
+        }
+        n += 1;
+        singer.flush().unwrap();
+        continue;
+    }
+    singer.flush().unwrap();
+    writeln!(out, "\n[...]").unwrap();
+}
+
+//
 // Helper functions
 //
 
@@ -483,6 +621,23 @@ fn get_time() -> (u8, u8) {
     let hour = day_secs / (60 * 60);
     let min = (day_secs - (hour * 60 * 60)) / 60;
     (hour.try_into().unwrap(), min.try_into().unwrap())
+}
+
+extern "Rust" fn raw_true() -> bool {
+    union MyBool {
+        b: bool,
+        _u: u8,
+    }
+    let mut maybe = std::mem::MaybeUninit::<MyBool>::uninit();
+    unsafe {
+        let p = &raw mut (*maybe.as_mut_ptr()).b;
+        p.write(true);
+    }
+    // I know this is cheating, but it would be a pain to bring in extern functions
+    // just do demo the `safe` keyword.
+    // At least this way we can see how does a _weak keyword_ work.
+    let safe = unsafe { maybe.assume_init().b };
+    safe
 }
 
 //

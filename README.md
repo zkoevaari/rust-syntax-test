@@ -8,10 +8,17 @@ highlighters.
 
 ## Status ##
 
-WIP.
+Almost complete, only `async` and `await` are remaining.
 
 
 ## Known bugs ##
 
-Besides the intended purpose, the program can be built but it is silly,
-sub-optimal, and not very pretty.
+Besides the intended purpose, the program can be built and run,
+but it is silly, sub-optimal, and not very pretty.
+
+
+TODO
+====
+- 'static
+- comment variants
+- rename swap_ascii to replace_ascii
