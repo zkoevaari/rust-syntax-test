@@ -6,6 +6,13 @@
     (see LICENSE.txt)
 */
 
+/*!
+    Goal of this source file is to exercise most language features, so it can be used in the
+    development of syntax highlighters.
+
+    It is intentionally silly.
+*/
+
 use std::collections::VecDeque;
 use std::io::Write;
 use std::time::SystemTime;
@@ -31,6 +38,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+///
+/// Literals
+///
+
 fn char_literals() -> String {
     let v = vec![
         ('F',               b'F',       70),
@@ -47,7 +58,7 @@ fn char_literals() -> String {
         ('\u{0073}',        b'\x73',    0x73),
         ('\u{00_00_74}',    b'\x74',    0x74),
         ('y',               b'y',       121u8),
-        ('\"',              b'\"',      0b10_0010u8), //" TODO remove
+        ('\"',              b'\"',      0b10_0010u8), //" Shouldn't need this doublequote
         ('\t',              b'\t',      0o11u8),
         ('\\',              b'\\',      0x5Cu8),
         ('o',               b'o',       0x6fu8),
@@ -128,7 +139,7 @@ fn raw_strings() -> String {
 fn strings() -> &'static str {
     let normal_str = "\u{9}|  \x7c T\"\' |   |    /\
     '\\  A\r\n\t\x7C--| |\u{2d}  |   |   \u{28}   ) V
-    \u{07C}  | \u{007C}__ |\u{0005F}_ |_\u{00_00_5F}  \\_/  #\0"; //" TODO remove
+    \u{07C}  | \u{007C}__ |\u{0005F}_ |_\u{00_00_5F}  \\_/  #\0"; //" Shouldn't need this doublequote
 
     let byte_str = b"\x09|  \x7c T\"\' |   |    /\
     '\\  A\r\n\t\x7C--| |\x2D  |   |   \x28   ) V
@@ -136,7 +147,7 @@ fn strings() -> &'static str {
 
     let c_str = c"\u{9}|  \x7c T\"\' |   |    /\
     '\\  A\r\n\t\x7C--| |\u{2d}  |   |   \u{28}   ) V
-    \u{07C}  | \u{007C}__ |\u{0005F}_ |_\u{00_00_5F}  \\_/  #"; //" TODO remove
+    \u{07C}  | \u{007C}__ |\u{0005F}_ |_\u{00_00_5F}  \\_/  #"; //" Shouldn't need this doublequote
 
     assert_eq!(normal_str, std::str::from_utf8(byte_str).unwrap());
     assert_eq!(c_str, std::ffi::CStr::from_bytes_with_nul(byte_str).unwrap());
@@ -643,8 +654,8 @@ extern "Rust" fn raw_true() -> bool {
         p.write(true);
     }
     // I know this is cheating, but it would be a pain to bring in extern functions
-    // just do demo the `safe` keyword.
-    // At least this way we can see how does a _weak keyword_ work.
+    // just to demo the `safe` keyword.
+    // At least this way we can see how a _weak keyword_ works.
     let safe = unsafe { maybe.assume_init().b };
     safe
 }
@@ -695,4 +706,48 @@ mod tests {
             assert_eq!(parse_unicode(&a), Some(r));
         }
     }
+}
+
+// Let's put comment highlighting to the test
+
+/// This is a doc comment...
+//// ...but this is not
+
+/* Similarly, */
+/** this is a doc comment... */
+/*** ...but this is not */
+
+mod inner {
+    //! Remember: bang marks inner, i.e. applies to the parent
+    //!! Makes no difference...
+    /*! ...even if there are... */
+    /*!! ...more than one exclamation marks */
+}
+
+mod nest {
+    /* Can we /* nest */ block comments? */
+    /*   /* */  /*! */  /** */  */
+    /*!  /* */  /*! */  /** */  */
+    /**  /* */  /*! */  /** */  */
+
+    /*
+    /// How about...
+    */
+    /**
+    // ...mixing them?
+    */
+
+    mod dummy1 {}
+}
+
+mod empty {
+    //!
+    /*!*/
+    //
+    ///
+    ////
+    /**/
+    /***/
+
+    mod dummy2 {}
 }

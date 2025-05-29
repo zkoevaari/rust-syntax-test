@@ -1,3 +1,5 @@
+# List of Rust keywords, edition 2024 (version 1.85.0)
+
 # Strict keywords
 as
 async
@@ -43,6 +45,22 @@ macro_rules
 raw
 safe
 union
+
+# Reserved keywords
+#abstract
+#become
+#box
+#do
+#final
+#gen
+#macro
+#override
+#priv
+#try
+#typeof
+#unsized
+#virtual
+#yield
 
 # Built-in types
 bool
