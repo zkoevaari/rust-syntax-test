@@ -177,7 +177,7 @@ macro_rules! string_try_chars {
     };
 }
 fn integers() -> String {
-    let msg = string_try_chars![
+    string_try_chars![
         72u8 as u8,
         101u16 as u16,
         108u32 as u32,
@@ -190,8 +190,7 @@ fn integers() -> String {
         108i64 as i64,
         100i128 as i128,
         33isize as isize,
-    ];
-    format!("{msg}")
+    ]
 }
 
 fn floating_points() -> String {
@@ -367,14 +366,10 @@ impl<'a, T: Write> EllipsizedSinger<'a, T> {
     }
 }
 impl<T: Write> Write for EllipsizedSinger<'_, T> {
-
     fn write(&mut self, b: &[u8]) -> IoResult<usize> {
-        let chunk = String::from(
-            str::from_utf8(b).map_err(move |e| std::io::Error::new(std::io::ErrorKind::Other, e))?
-        );
-        if self.buf.is_empty()
-            || self.buf.back().unwrap().chars().rev().next().unwrap() == '\n' {
-                self.buf.push_back(chunk);
+        let chunk = String::from(str::from_utf8(b).map_err(std::io::Error::other)?);
+        if self.buf.is_empty() || self.buf.back().unwrap().ends_with('\n') {
+            self.buf.push_back(chunk);
         } else {
             self.buf.back_mut().unwrap().push_str(&chunk);
         }
@@ -382,7 +377,7 @@ impl<T: Write> Write for EllipsizedSinger<'_, T> {
     }
 
     fn flush(&mut self) -> IoResult<()> {
-        if self.buf.len() <= 16 {
+        if self.buf.len() <= 17 {
             for s in self.buf.iter() {
                 write!(self.writer, "{s}")?;
             }
@@ -441,7 +436,7 @@ fn misc_keywords(mut out: impl Write) {
 //
 
 fn substr_until_nul(slice: &str) -> &str {
-    match slice.chars().position(|c| c == '\0') {
+    match slice.chars().position(move |c| c == '\0') {
         Some(i) => &slice[0..i],
         None => slice,
     }
@@ -451,7 +446,7 @@ fn remove_tabs(s: &str) -> String {
     s.replace('\t', "").replace("\n    ", "\n")
 }
 
-fn swap_ascii(s: &mut str, p: u8, r: u8) {
+fn replace_ascii(s: &mut str, p: u8, r: u8) {
     assert!(p <= 0x7F);
     assert!(r <= 0x7F);
     unsafe {
@@ -464,13 +459,12 @@ fn swap_ascii(s: &mut str, p: u8, r: u8) {
 }
 
 fn tab_to_space(s: &mut str) {
-    swap_ascii(s, b'\t', b' ');
+    replace_ascii(s, b'\t', b' ');
 }
 
 fn prettify(s: &str) -> String {
-    let mut n = remove_tabs(s)
-        .replace('A', "\u{039b}");
-    swap_ascii(&mut n, b'#', b'o');
+    let mut n = remove_tabs(s).replace('A', "\u{039b}");
+    replace_ascii(&mut n, b'#', b'o');
     n
 }
 
@@ -570,9 +564,7 @@ fn unescape(s: &str) -> String {
             State::UnicodeMaybe => {
                 buf.push(c);
                 match c {
-                    '{' => {
-                        State::Unicode(Vec::new())
-                    }
+                    '{' => State::Unicode(Vec::new()),
                     _ => {
                         out.push_str(&buf);
                         buf.clear();
@@ -630,7 +622,10 @@ fn parse_unicode(digits: &[u8]) -> Option<char> {
 }
 
 fn get_time() -> (u8, u8) {
-    let epoch_secs = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
+    let epoch_secs = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
     let day_secs = epoch_secs % (24 * 60 * 60);
     let hour = day_secs / (60 * 60);
     let min = (day_secs - (hour * 60 * 60)) / 60;
@@ -679,7 +674,10 @@ mod tests {
         assert_eq!(substr_until_nul(art4), ref3);
         assert_eq!(
             substr_until_nul(art4),
-            std::ffi::CStr::from_bytes_until_nul(art4.as_bytes()).unwrap().to_str().unwrap()
+            std::ffi::CStr::from_bytes_until_nul(art4.as_bytes())
+                .unwrap()
+                .to_str()
+                .unwrap()
         );
     }
 
