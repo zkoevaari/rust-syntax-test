@@ -75,14 +75,14 @@ fn char_literals() -> String {
 //~         ('\c',          b'\c',          0X63),
 //~         ('\x',          b'\x',          6a3),
 //~         ('\x9',         b'\x9',         0b2),
-//~         ('\x80',        b'\xGG',        0o8),
-//~         ('\x7_F',       b'\x063',       0xG),
+//~         ('\x80',        b'\xGG',        0o78),
+//~         ('\x7_F',       b'\x063',       0x09fg),
 //~         ('\x063',       b'\u',          00x63),
 //~         ('\u',          b'\u0063'       63u),
 //~         ('\u0063',      b'\u{}',        63u0),
 //~         ('\u{}',        b'\u{G}',       63u08),
 //~         ('\u{G}',       b'\u{0063}',    63u_8),
-//~         ('\u{+0063}',   b'\u{+0063}',   63u8_),
+//~         ('\u{_0063}',   b'\u{_0063}',   63u8_),
 //~         ('\u{1234567}', b'\u{1234567}', 63u12),
     ];
 
@@ -139,7 +139,8 @@ fn raw_strings() -> String {
 fn strings() -> &'static str {
     let normal_str = "\u{9}|  \x7c T\"\' |   |    /\
     '\\  A\r\n\t\x7C--| |\u{2d}  |   |   \u{28}   ) V
-    \u{07C}  | \u{007C}__ |\u{0005F}_ |_\u{00_00_5F}  \\_/  #\0"; //" Shouldn't need this doublequote
+    \u{07C}  | \u{007C}__ |\u{0005F}_ |_\u{00_00_5F}  \\_/  #\0";
+    //" Shouldn't need this doublequote
 
     let byte_str = b"\x09|  \x7c T\"\' |   |    /\
     '\\  A\r\n\t\x7C--| |\x2D  |   |   \x28   ) V
@@ -147,7 +148,8 @@ fn strings() -> &'static str {
 
     let c_str = c"\u{9}|  \x7c T\"\' |   |    /\
     '\\  A\r\n\t\x7C--| |\u{2d}  |   |   \u{28}   ) V
-    \u{07C}  | \u{007C}__ |\u{0005F}_ |_\u{00_00_5F}  \\_/  #"; //" Shouldn't need this doublequote
+    \u{07C}  | \u{007C}__ |\u{0005F}_ |_\u{00_00_5F}  \\_/  #";
+    //" Shouldn't need this doublequote
 
     assert_eq!(normal_str, std::str::from_utf8(byte_str).unwrap());
     assert_eq!(c_str, std::ffi::CStr::from_bytes_with_nul(byte_str).unwrap());
@@ -161,6 +163,7 @@ fn strings() -> &'static str {
 //~     let ic = c"\c \x \x9 \xGG \x7_F \u \u0063 \u{} \u{G} \u{+0063} \u{1234567}";
 //~     let ic0 = c"\0 \x0 \x00 \u{0} \u{00} \u{000} \u{0000} \
 //~         \u{0_0000} \u{00_0000} \u{000_0000}";
+    //" Shouldn't need this doublequote
 
     // /*
     let multi = "Line #1
@@ -235,11 +238,11 @@ fn floating_points() -> String {
         116e+_0,    sp,         115E+_0,
         o,          102e-_0,    116E-_0,
         119e+0_f64, a,          114E+0_f64,
-        e,          46e-0_f64,  34E-0_f64,
+        e,          46e-0_f64,  34.0E-0_f64,
 
         // These are invalid
 //~         _1.0,       1._,        1._0,
-//~         1.f64,      1.0f12,     1.0f64,
+//~         1.f64,      1.e0,       1.0f12,
 //~         1.0u64,     1._f64,     1._0f64,
 //~         1.0f_64,    1.0f64_,    0x1.0,
 //~         1.0x0,      1e,         1E,
@@ -298,6 +301,52 @@ fn ranges() -> String {
     // */
 
     format!("{prefix} {h12} o'clock universal, {tod}.")
+}
+
+fn _reserved_and_raw() -> &'r#static str {
+    macro_rules! check {($($_:tt)*) => {}}
+
+    check!(#hash);
+    check!(#);
+
+    // These are invalid
+    check!(pfx#hash);
+    check!(pfx'lt);
+    check!(pfx'c');
+    check!(pfx"str");
+    check!(b#hash);
+    check!(c#hash);
+    check!(c'lt);
+    check!(c'c');
+    check!(r#crate);
+    check!(r#self);
+    check!(r#Self);
+    check!(r#super);
+    check!(r#_);
+    check!(r'lt);
+    check!(r'c');
+    check!(br#hash);
+    check!(br'lt);
+    check!(br'c');
+    check!(cr#hash);
+    check!(cr'lt);
+    check!(cr'c');
+    check!(_#hash);
+    check!(_'lt);
+    check!(_'c');
+    check!(_"str");
+    check!('lt#hash);
+    check!('_#hash);
+    check!(#"guarded");
+    check!(##);
+
+    // Raw identifier
+    let r#static = r"static";
+    r#static
+}
+
+fn _never() -> ! {
+    panic!("This call never returns.");
 }
 
 //
@@ -726,9 +775,9 @@ mod inner {
 
 mod nest {
     /* Can we /* nest */ block comments? */
-    /*   /* */  /*! */  /** */  */
-    /*!  /* */  /*! */  /** */  */
-    /**  /* */  /*! */  /** */  */
+    /*   /*  /*!  /** */  */  */  */
+    /*!  /*  /*!  /** */  */  */  */
+    /**  /*  /*!  /** */  */  */  */
 
     /*
     /// How about...
@@ -736,6 +785,8 @@ mod nest {
     /**
     // ...mixing them?
     */
+    // Or /** maybe */ the
+    /// other /* way */ around?
 
     mod dummy1 {}
 }
