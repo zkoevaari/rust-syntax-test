@@ -9,8 +9,6 @@
 /*!
     Goal of this source file is to exercise most language features, so it can be used in the
     development of syntax highlighters.
-
-    It is intentionally silly.
 */
 
 use std::collections::VecDeque;
@@ -303,46 +301,85 @@ fn ranges() -> String {
     format!("{prefix} {h12} o'clock universal, {tod}.")
 }
 
-fn _reserved_and_raw() -> &'r#static str {
-    macro_rules! check {($($_:tt)*) => {}}
+macro_rules! check {
+    // Just ensures that the input consists of valid tokens
+    ($($_:tt)*) => {}
+}
 
-    check!(#hash);
-    check!(#);
+fn _prefix_suffix() -> &'r#static str {
+    check!(#hash, #);
+    check!('c'sfx,      'c'_sfx);
+    check!(b'c'sfx,     b'c'_sfx);
+    check!("str"sfx,    "str"_sfx);
+    check!(b"str"sfx,   b"str"_sfx);
+    check!(c"str"sfx,   c"str"_sfx);
+    check!(r"str"sfx,   r"str"_sfx);
+    check!(br"str"sfx,  br"str"_sfx);
+    check!(cr"str"sfx,  cr"str"_sfx);
+    check!('c'5fx,      b'c'5fx);
+    check!("str"5fx,    r"str"5fx);
+    check!(b"str"5fx,   br"str"5fx);
+    check!(c"str"5fx,   cr"str"5fx);
+    check!(1sfx,        1_sfx);
+    check!(0b1sfx,      0b1_sfx);
+    check!(0o1sfx,      0o1_sfx);
+    check!(0x1sfx,      0x1_sfx);
+    check!(0x1em,       0x1e2);
+    check!(1.0sfx,      1.0_sfx);
+    check!(1.0e1em,     1.0e1_em);
 
     // These are invalid
-    check!(pfx#hash);
-    check!(pfx'lt);
-    check!(pfx'c');
-    check!(pfx"str");
-    check!(b#hash);
-    check!(c#hash);
-    check!(c'lt);
-    check!(c'c');
-    check!(r#crate);
-    check!(r#self);
-    check!(r#Self);
-    check!(r#super);
-    check!(r#_);
-    check!(r'lt);
-    check!(r'c');
-    check!(br#hash);
-    check!(br'lt);
-    check!(br'c');
-    check!(cr#hash);
-    check!(cr'lt);
-    check!(cr'c');
-    check!(_#hash);
-    check!(_'lt);
-    check!(_'c');
-    check!(_"str");
-    check!('lt#hash);
-    check!('_#hash);
-    check!(#"guarded");
-    check!(##);
+//~     check!(pfx#hash,    pfx'lt);
+//~     check!(pfx'c',      pfx"str");
+//~     check!(b#hash,      c#hash);
+//~     check!(c'lt,        c'c');
+//~     check!(r#crate,     r#super);
+//~     check!(r#self,      r#Self);
+//~     check!(r#,          r#5fx);
+//~     check!(r'lt,        r'c');
+//~     check!(br#hash,     br'lt);
+//~     check!(br'c',       cr#hash);
+//~     check!(cr'lt,       cr'c');
+//~     check!(_#hash,      _'lt);
+//~     check!(_'c',        _"str");
+//~     check!('lt#hash,    '_#hash);
+//~     check!(#"guarded",  ##);
+//~     check!(1em,         1.0em);
+//~     check!(0b1em,       0b1e2);
+//~     check!(0o1em,       0o1e2);
 
     // Raw identifier
     let r#static = r"static";
     r#static
+}
+
+fn _únıcødë<'τ>() -> &'τ str {
+    check!('c'ŝfx,      'c'súf);
+    check!(b'c'ŝfx,     b'c'súf);
+    check!("str"ŝfx,    "str"súf);
+    check!(b"str"ŝfx,   b"str"súf);
+    check!(c"str"ŝfx,   c"str"súf);
+    check!(r"str"ŝfx,   r"str"súf);
+    check!(br"str"ŝfx,  br"str"súf);
+    check!(cr"str"ŝfx,  cr"str"súf);
+    check!(1ŝfx,        1súf);
+    check!(0b1ŝfx,      0b1súf);
+    check!(0o1ŝfx,      0o1súf);
+    check!(0x1ŝfx,      0x1súf);
+    check!(0x1.ŝfx,     0x1.súf);
+    check!(1.ŝfx,       1.súf);
+    check!(1.0ŝfx,      1.0súf);
+
+    // These are invalid
+//~     check!(0bŝfx,       0bsúf);
+//~     check!(0oŝfx,       0osúf);
+//~     check!(0xŝfx,       0xsúf);
+//~     check!(0b2ŝfx,      0b2súf);
+//~     check!(1eŝfx,       1esúf);
+
+    //let próba0 = "ÁRVÍZTŰRŐ TÜKÖRFÚRÓGÉP";
+    let próba1 = "árvíztűrő tükörfúrógép";
+    próba1
 }
 
 fn _never() -> ! {
@@ -788,7 +825,10 @@ mod nest {
     // Or /** maybe */ the
     /// other /* way */ around?
 
-    mod dummy1 {}
+    mod todo {
+        //! Testing: todo, Todo, TODO, TODOCUMENT, TODAY...
+        /* For evaluation: fixme, Fixme, FIXME, FIXMEQUICK, FIXTHIS... */
+    }
 }
 
 mod empty {
@@ -800,5 +840,8 @@ mod empty {
     /**/
     /***/
 
-    mod dummy2 {}
+    mod note {
+        // Need to check: note, Note, NOTE, NOTEWORTHY, NOTHING...
+        /*! Have to try: hack, Hack, HACK, HACKATHON, HAPHAZARD... */
+    }
 }
